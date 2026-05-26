@@ -64,6 +64,41 @@ function parseClientRow(row, header) {
   return obj;
 }
 
+
+function getClientRowId(client) {
+  if (!client || typeof client !== 'object') return null;
+  return client.id || client.record?.id || null;
+}
+
+function getClientCode(client) {
+  if (!client) return '';
+  if (typeof client === 'string' || typeof client === 'number') return String(client);
+  return client.ClientCode || client.clientCode || client.record?.ClientCode || client.record?.clientCode || '';
+}
+
+function clientIdsEqual(a, b) {
+  return a != null && b != null && String(a) === String(b);
+}
+
+function summarizeClient(client) {
+  if (!client) return null;
+  return {
+    id: getClientRowId(client),
+    recordId: client.record?.id || null,
+    clientCode: getClientCode(client),
+    clientName: client.ClientName || client.clientName || client.record?.ClientName || '',
+  };
+}
+
+function logClientLookup(operation, { selectedClientId, searchCode, data, matchedClient }) {
+  console.log(`[${operation}] lookup debug`, {
+    selectedClientId,
+    fetchedClientIds: (data || []).map(getClientRowId),
+    fetchedClientCodes: (data || []).map(getClientCode),
+    matchedClient: summarizeClient(matchedClient),
+  });
+}
+
 export async function checkClientCodeExists(clientCode) {
   const data = await db.getTableRows(CLIENTS_TABLE);
   return data.some(row => row.ClientCode === clientCode);
@@ -78,6 +113,14 @@ export async function getAllClients(forceRefresh = false) {
     console.log("[getAllClients] RAW DATA:", data);
 
     const rows = Array.isArray(data) ? data : [];
+    const sampleRow = rows[0] || null;
+    console.log("[getAllClients] DATA STRUCTURE", {
+      table: CLIENTS_TABLE,
+      rowCount: rows.length,
+      sampleKeys: sampleRow ? Object.keys(sampleRow) : [],
+      sampleClient: summarizeClient(sampleRow),
+    });
+
     const mapped = rows.map((row) => ({
       ...row,
       // Basic Information
@@ -187,8 +230,13 @@ export async function addClient(client) {
   }
 }
 
-export async function updateClient(client, originalClientCode = null) {
-  console.log("[updateClient] Starting update operation", { clientCode: client.clientCode, originalCode: originalClientCode });
+export async function updateClient(client, originalClientCode = null, originalClientId = null) {
+  const selectedClientId = originalClientId || getClientRowId(client);
+  console.log("[updateClient] Starting update operation", {
+    selectedClientId,
+    clientCode: client.clientCode,
+    originalCode: originalClientCode,
+  });
   
   try {
     // Check if the new client code already exists (and it's not the same as the original)
@@ -200,8 +248,19 @@ export async function updateClient(client, originalClientCode = null) {
     
     const data = await db.getTableRows(CLIENTS_TABLE);
     const searchCode = originalClientCode || client.clientCode;
-    const existing = data.find(row => row.ClientCode === searchCode);
-    if (!existing || !existing.id) throw new Error('Client not found');
+    const selectedString = typeof client === 'string' || typeof client === 'number' ? String(client) : null;
+    const existing = (selectedClientId || selectedString)
+      ? data.find(row => clientIdsEqual(getClientRowId(row), selectedClientId || selectedString))
+      : data.find(row => row.ClientCode === searchCode);
+    const matchedClient = existing || data.find(row => row.ClientCode === searchCode);
+    logClientLookup('updateClient', {
+      selectedClientId,
+      searchCode,
+      data,
+      matchedClient,
+    });
+    const clientId = getClientRowId(matchedClient);
+    if (!matchedClient || !clientId) throw new Error('Client not found');
     
     const row = {
       // Basic Information
@@ -244,8 +303,8 @@ export async function updateClient(client, originalClientCode = null) {
       TotalValue: sheetFloat(client.totalValue, 0)
     };
     
-    console.log("[updateClient] Updating client", { id: existing.id, rowKeys: Object.keys(row) });
-    await db.updateTableRowById(CLIENTS_TABLE, existing.id, row);
+    console.log("[updateClient] Updating client", { id: clientId, rowKeys: Object.keys(row) });
+    await db.updateTableRowById(CLIENTS_TABLE, clientId, row);
     console.log("[updateClient] ✅ SUCCESS: Client updated", { clientCode: client.clientCode });
   } catch (error) {
     console.error("[updateClient] ❌ ERROR:", error.message, error);
@@ -253,17 +312,33 @@ export async function updateClient(client, originalClientCode = null) {
   }
 }
 
-export async function deleteClient(clientCode) {
-  console.log("[deleteClient] Starting delete operation", { clientCode });
+export async function deleteClient(selectedClient) {
+  const selectedClientId = getClientRowId(selectedClient);
+  const selectedClientCode = getClientCode(selectedClient);
+  console.log("[deleteClient] Starting delete operation", {
+    selectedClientId,
+    selectedClientCode,
+  });
   
   try {
     const data = await db.getTableRows(CLIENTS_TABLE);
-    const row = data.find(r => r.ClientCode === clientCode);
-    if (!row || !row.id) throw new Error('Client not found');
+    const selectedString = typeof selectedClient === 'string' || typeof selectedClient === 'number' ? String(selectedClient) : null;
+    const row = (selectedClientId || selectedString)
+      ? data.find(r => clientIdsEqual(getClientRowId(r), selectedClientId || selectedString))
+      : data.find(r => r.ClientCode === selectedClientCode);
+    const matchedClient = row || data.find(r => r.ClientCode === selectedClientCode);
+    logClientLookup('deleteClient', {
+      selectedClientId,
+      searchCode: selectedClientCode,
+      data,
+      matchedClient,
+    });
+    const clientId = getClientRowId(matchedClient);
+    if (!matchedClient || !clientId) throw new Error('Client not found');
     
-    console.log("[deleteClient] Deleting client", { id: row.id, clientCode });
-    await db.deleteTableRowById(CLIENTS_TABLE, row.id);
-    console.log("[deleteClient] ✅ SUCCESS: Client deleted", { clientCode });
+    console.log("[deleteClient] Deleting client", { id: clientId, clientCode: selectedClientCode });
+    await db.deleteTableRowById(CLIENTS_TABLE, clientId);
+    console.log("[deleteClient] ✅ SUCCESS: Client deleted", { clientCode: selectedClientCode });
   } catch (error) {
     console.error("[deleteClient] ❌ ERROR:", error.message, error);
     throw error;

@@ -337,8 +337,8 @@ export async function getTableRows(tableName) {
           if (!fallbackError) {
             console.log(`[getTableRows SUCCESS] Used fallback table: ${fallbackName} (requested: ${name}), rows: ${(fallbackRows || []).length}`);
             return (fallbackRows || []).map((r) => ({
-              id: r.id,
               ...(r.record || {}),
+              id: r.id,
             }));
           }
         } catch (err) {
@@ -387,8 +387,8 @@ export async function getTableRows(tableName) {
   debugGetTableRows('success', { resolvedName: name, rowCount: (rows || []).length });
   console.log(`[getTableRows SUCCESS] Table: ${name}, rows: ${(rows || []).length}`);
   return (rows || []).map((r) => ({
-    id: r.id,
     ...(r.record || {}),
+    id: r.id,
   }));
 }
 

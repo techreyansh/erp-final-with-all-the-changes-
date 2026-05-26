@@ -73,6 +73,7 @@ const ClientManager = () => {
   const [open, setOpen] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const [originalClientCode, setOriginalClientCode] = useState(null);
+  const [originalClientId, setOriginalClientId] = useState(null);
   const [form, setForm] = useState(emptyClient);
   const [error, setError] = useState(null);
   const [contactSectionCollapsed, setContactSectionCollapsed] = useState(false);
@@ -222,9 +223,11 @@ const ClientManager = () => {
   const handleOpen = (client, idx) => {
     if (client) {
       setForm({ ...client });
+      setOriginalClientId(client.id || client.record?.id || null);
       setOriginalClientCode(client.clientCode); // Store original client code for updates
     } else {
       setForm({ ...emptyClient });
+      setOriginalClientId(null);
       setOriginalClientCode(null);
     }
     
@@ -239,6 +242,7 @@ const ClientManager = () => {
   const handleClose = () => {
     setOpen(false);
     setEditIndex(null);
+    setOriginalClientId(null);
     setOriginalClientCode(null);
     setForm(emptyClient);
     setError(null);
@@ -493,7 +497,7 @@ const ClientManager = () => {
       }
 
       if (editIndex !== null) {
-        await updateClient(form, originalClientCode);
+        await updateClient(form, originalClientCode, originalClientId);
         // Refresh data to show updated client
         const data = await getAllClients();
         setClients(data);
@@ -518,10 +522,10 @@ const ClientManager = () => {
       setLoading(false);
     }
   };
-  const handleDelete = async (clientCode) => {
+  const handleDelete = async (client) => {
     if (window.confirm('Are you sure you want to delete this client?')) {
       try {
-        await deleteClient(clientCode);
+        await deleteClient(client);
         // Refresh data to get updated list
         const data = await getAllClients();
         setClients(data);
@@ -1355,7 +1359,7 @@ const ClientManager = () => {
                               </Tooltip>
                               <Tooltip title="Delete Client">
                         <IconButton 
-                          onClick={() => handleDelete(client.clientCode)}
+                          onClick={() => handleDelete(client)}
                           sx={{ 
                                     color: '#dc3545',
                                     '&:hover': { 
@@ -1560,7 +1564,7 @@ const ClientManager = () => {
                                 <Button
                                   size="small"
                                   startIcon={<Delete />}
-                                  onClick={() => handleDelete(idx)}
+                                  onClick={() => handleDelete(client)}
                                   sx={{
                                     background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                                     color: 'white',

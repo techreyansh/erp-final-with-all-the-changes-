@@ -1,0 +1,85 @@
+PRODUCTION MANAGEMENT GOOGLE SHEETS SETUP
+===========================================
+
+SHEET 1: Production Monitoring
+==============================
+HEADERS:
+Timestamp	Assembly Lines Data	Molding Machines Data	Packing Lines Data	Production Flow Data	Current Order Data
+
+SAMPLE DATA:
+2024-01-15 10:30:00	[{"id":"ASM-L01","status":"Running","efficiency":97,"output":4640},{"id":"ASM-L02","status":"Running","efficiency":95,"output":4520},{"id":"ASM-L03","status":"Maintenance","efficiency":0,"output":0},{"id":"ASM-L04","status":"Ready","efficiency":0,"output":0}]	[{"id":"MOLD-M01","status":"Running","moldType":"Inner","efficiency":95,"output":2280},{"id":"MOLD-M02","status":"Running","moldType":"Inner","efficiency":95,"output":2200},{"id":"MOLD-M03","status":"Running","moldType":"Outer","efficiency":95,"output":4960}]	[{"id":"PACK-L01","status":"Running","efficiency":97,"output":4680}]	{"cutting":{"efficiency":98,"output":103},"assembly":{"efficiency":96,"output":9160},"molding":{"efficiency":95,"output":9440},"packing":{"efficiency":97,"output":4680}}	{"orderNumber":"ORD-2024-001","productCode":"PC-3P-16A-1.5","quantity":10000,"status":"Running"}
+
+
+SHEET 2: Machine Status Log
+============================
+HEADERS:
+Timestamp	Machine ID	Machine Type	Status	Current Speed	Efficiency	Operator	Product Code	Output
+
+SAMPLE DATA:
+2024-01-15 08:00:00	ASM-L01	Assembly Line	Running	580	97	John Doe	PC-3P-16A-1.5	4640
+2024-01-15 08:00:00	ASM-L02	Assembly Line	Running	565	95	Jane Smith	PC-2P-6A-1.25	4520
+2024-01-15 08:00:00	ASM-L03	Assembly Line	Maintenance	0	0		0
+2024-01-15 08:00:00	ASM-L04	Assembly Line	Ready	0	0		0
+2024-01-15 08:00:00	MOLD-M01	Molding Machine	Running	285	95	Mike Johnson	PC-3P-16A-1.5	2280
+2024-01-15 08:00:00	MOLD-M02	Molding Machine	Running	275	95	Sarah Wilson	PC-3P-16A-1.5	2200
+2024-01-15 08:00:00	MOLD-M03	Molding Machine	Running	620	95	David Brown	PC-3P-16A-1.5	4960
+2024-01-15 08:00:00	MOLD-M04	Molding Machine	Changeover	0	0	Lisa Garcia		0
+2024-01-15 08:00:00	PACK-L01	Packing Line	Running	585	97	Anna Chen	PC-3P-16A-1.5	4680
+
+
+SHEET 3: Mold Compatibility Matrix
+===================================
+HEADERS:
+Mold ID	Mold Name	Mold Type	Compatible Machines	Product Types	Status	Location	Last Used	Changeover Time
+
+SAMPLE DATA:
+MOLD-2P-6A-INNER	2-Pin 6A Inner Mold	Inner	MOLD-M01,MOLD-M02,MOLD-M05,MOLD-M06	2-pin,6A	Available	Mold Storage A		45 minutes
+MOLD-2P-6A-OUTER	2-Pin 6A Outer Mold	Outer	MOLD-M03,MOLD-M04,MOLD-M06	2-pin,6A	Available	Mold Storage A		30 minutes
+MOLD-3P-6A-INNER	3-Pin 6A Inner Mold	Inner	MOLD-M01,MOLD-M02,MOLD-M05,MOLD-M06	3-pin,6A	Available	Mold Storage B		45 minutes
+MOLD-3P-6A-OUTER	3-Pin 6A Outer Mold	Outer	MOLD-M03,MOLD-M04,MOLD-M06	3-pin,6A	Available	Mold Storage B		30 minutes
+MOLD-3P-16A-INNER	3-Pin 16A Inner Mold	Inner	MOLD-M01,MOLD-M02,MOLD-M06	3-pin,16A	In Use	Machine M01, M02	2024-01-15 08:00:00	45 minutes
+MOLD-3P-16A-OUTER	3-Pin 16A Outer Mold	Outer	MOLD-M03,MOLD-M04,MOLD-M06	3-pin,16A	In Use	Machine M03	2024-01-15 08:00:00	30 minutes
+MOLD-GROMMET-STD	Standard Grommet Mold	Grommet	MOLD-M03,MOLD-M04,MOLD-M06	Grommet	Available	Mold Storage C		20 minutes
+
+
+SHEET 4: Production Orders
+===========================
+HEADERS:
+Order Number	Product Code	Quantity	Start Date	End Date	Status	Cutting Output	Assembly Output	Molding Output	Packing Output	Overall Efficiency
+
+SAMPLE DATA:
+ORD-2024-001	PC-3P-16A-1.5	10000	2024-01-15	2024-01-16	Running	9800	9400	8900	8500	97%
+ORD-2024-002	PC-2P-6A-1.25	5000	2024-01-16		Planning	0	0	0	0	0%
+ORD-2024-003	PC-3P-6A-1.75	7500	2024-01-17		Scheduled	0	0	0	0	0%
+
+
+SHEET 5: Power Cord Master (if not already created)
+====================================================
+HEADERS:
+Product Code	Product Name	Pin Type	Amperage	Cable Type	Standard Length	Plug Type	Molding Required	Assembly Steps	Terminal Specs	Applications	Safety Standards	Is Active
+
+SAMPLE DATA:
+PC-3P-16A-1.5	3-Pin 16A Power Cord 1.5m	3-pin	16A	3-Core Cable	1.5	Heavy Duty	Inner,Outer	Stripping,Pin Insertion,Terminal Assembly	Copper terminals	Geyser,Heavy appliances	IS 1293	TRUE
+PC-2P-6A-1.25	2-Pin 6A Power Cord 1.25m	2-pin	6A	2-Core Cable	1.25	Standard	Inner,Outer	Stripping,Pin Insertion	Standard terminals	TV,Light appliances	IS 1293	TRUE
+PC-3P-6A-1.75	3-Pin 6A Power Cord 1.75m	3-pin	6A	3-Core Cable	1.75	Standard	Inner,Outer,Grommet	Stripping,Pin Insertion,Terminal Assembly,Grommet	Standard terminals	Washing Machine,Cooler	IS 1293	TRUE
+PC-2P-6A-2.0	2-Pin 6A Power Cord 2.0m	2-pin	6A	2-Core Cable	2.0	Standard	Inner,Outer	Stripping,Pin Insertion	Standard terminals	TV,Electronics	IS 1293	TRUE
+
+
+INSTRUCTIONS:
+=============
+1. Create 5 new sheets in Google Sheets with these exact names:
+   - Production Monitoring
+   - Machine Status Log  
+   - Mold Compatibility Matrix
+   - Production Orders
+   - Power Cord Master
+
+2. For each sheet:
+   - Copy the HEADERS row and paste into Row 1
+   - Copy each SAMPLE DATA row and paste starting from Row 2
+
+3. Make sure to separate columns properly (use Tab separator)
+
+4. Save the Google Sheets document
+
+The system will automatically sync production data to these sheets!

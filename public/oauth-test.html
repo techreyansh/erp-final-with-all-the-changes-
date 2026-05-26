@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Google OAuth Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4285F4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-height: 100px;
+      white-space: pre-wrap;
+    }
+    #google-signin {
+      margin-top: 20px;
+      height: 40px;
+    }
+  </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <h1>Google OAuth Test Page</h1>
+  <p>This page tests if your Google OAuth credentials are working correctly with Google Identity Services.</p>
+  
+  <div id="google-signin"></div>
+  <div id="result">Waiting for Google Identity Services to load...</div>
+  
+  <script>
+    // Your OAuth client ID from Google Cloud Console
+    const CLIENT_ID = '476258971954-k11l81qo4ug6k7ka8vtcm8i0um8htd27.apps.googleusercontent.com';
+    const resultDiv = document.getElementById('result');
+    
+    // Wait for Google Identity Services to load
+    window.onload = function() {
+      try {
+        resultDiv.textContent = 'Google Identity Services loaded. Initializing...';
+        
+        // Initialize Google Identity Services
+        window.google.accounts.id.initialize({
+          client_id: CLIENT_ID,
+          callback: handleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+        
+        // Display the Sign In With Google button
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signin'),
+          { theme: 'outline', size: 'large', width: 300 }
+        );
+        
+        resultDiv.textContent = 'Google Identity Services initialized. Click "Sign in with Google" to test.';
+      } catch (error) {
+        resultDiv.textContent = 'Error initializing Google Identity Services: ' + JSON.stringify(error, null, 2);
+        console.error('Error initializing Google Identity Services:', error);
+      }
+    };
+    
+    // Handle the credential response
+    function handleCredentialResponse(response) {
+      if (response && response.credential) {
+        // Basic parsing of the JWT token to extract user info
+        try {
+          const token = response.credential;
+          const parts = token.split('.');
+          const payload = JSON.parse(atob(parts[1]));
+          
+          resultDiv.textContent = `
+Signed in successfully!
+
+User: ${payload.name}
+Email: ${payload.email}
+Picture: ${payload.picture}
+
+Token was successfully received. Your OAuth credentials are working correctly.
+          `;
+        } catch (error) {
+          resultDiv.textContent = 'Error parsing credential: ' + JSON.stringify(error, null, 2);
+        }
+      } else {
+        resultDiv.textContent = 'Error: No credential received from Google.';
+      }
+    }
+  </script>
+</body>
+</html> 

@@ -526,9 +526,10 @@ const ClientManager = () => {
     if (window.confirm('Are you sure you want to delete this client?')) {
       try {
         const clientId = client?.id;
-        console.log('Delete requested id:', clientId);
+        console.log('Delete ID:', clientId);
+        console.log('Selected client:', client);
         console.log('Actual row ids:', clients.map(c => c.id));
-        await deleteClient(clientId);
+        await deleteClient(clientId, client);
         // Refresh data to get updated list
         const data = await getAllClients();
         setClients(data);

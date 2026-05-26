@@ -2,6 +2,7 @@ import * as db from '../lib/db';
 import config from '../config/config';
 import { parseJsonArray } from '../utils/parseJsonField';
 import { sheetInt, sheetFloat } from '../utils/sheetNumbers';
+import { supabase } from '../lib/supabaseClient';
 
 /**
  * CLIENTS TABLE FIX: Centralized Table Mapping
@@ -64,6 +65,19 @@ function parseClientRow(row, header) {
   return obj;
 }
 
+function getSupabaseRowId(client) {
+  return client && typeof client === 'object' ? client.id : client;
+}
+
+function requireSupabaseRowId(client, operation) {
+  const clientId = getSupabaseRowId(client);
+  if (!clientId) {
+    console.log(`[${operation}] Missing Supabase row id`, { client });
+    throw new Error('Client not found');
+  }
+  return clientId;
+}
+
 export async function checkClientCodeExists(clientCode) {
   const data = await db.getTableRows(CLIENTS_TABLE);
   return data.some(row => row.ClientCode === clientCode);
@@ -78,6 +92,15 @@ export async function getAllClients(forceRefresh = false) {
     console.log("[getAllClients] RAW DATA:", data);
 
     const rows = Array.isArray(data) ? data : [];
+    const sampleRow = rows[0] || null;
+    console.log("[getAllClients] DATA STRUCTURE", {
+      table: CLIENTS_TABLE,
+      rowCount: rows.length,
+      sampleKeys: sampleRow ? Object.keys(sampleRow) : [],
+      sampleRowId: sampleRow?.id || null,
+      sampleClientCode: sampleRow?.ClientCode || null,
+    });
+
     const mapped = rows.map((row) => ({
       ...row,
       // Basic Information
@@ -187,8 +210,14 @@ export async function addClient(client) {
   }
 }
 
-export async function updateClient(client, originalClientCode = null) {
-  console.log("[updateClient] Starting update operation", { clientCode: client.clientCode, originalCode: originalClientCode });
+export async function updateClient(client, originalClientCode = null, originalClientId = null) {
+  const clientId = originalClientId || requireSupabaseRowId(client, 'updateClient');
+  console.log("[updateClient] Starting update operation", {
+    clientId,
+    selectedClient: client,
+    clientCode: client.clientCode,
+    originalCode: originalClientCode,
+  });
   
   try {
     // Check if the new client code already exists (and it's not the same as the original)
@@ -197,11 +226,6 @@ export async function updateClient(client, originalClientCode = null) {
         throw new Error('Client code already exists. Please use a different client code.');
       }
     }
-    
-    const data = await db.getTableRows(CLIENTS_TABLE);
-    const searchCode = originalClientCode || client.clientCode;
-    const existing = data.find(row => row.ClientCode === searchCode);
-    if (!existing || !existing.id) throw new Error('Client not found');
     
     const row = {
       // Basic Information
@@ -244,32 +268,42 @@ export async function updateClient(client, originalClientCode = null) {
       TotalValue: sheetFloat(client.totalValue, 0)
     };
     
-    console.log("[updateClient] Updating client", { id: existing.id, rowKeys: Object.keys(row) });
-    await db.updateTableRowById(CLIENTS_TABLE, existing.id, row);
+    console.log("[updateClient] Updating client", { id: clientId, rowKeys: Object.keys(row) });
+    const { error: updateError } = await supabase
+      .from('clients2')
+      .update(row)
+      .eq('id', clientId);
+
+    if (updateError) throw updateError;
+
     console.log("[updateClient] ✅ SUCCESS: Client updated", { clientCode: client.clientCode });
   } catch (error) {
     console.error("[updateClient] ❌ ERROR:", error.message, error);
     throw error;
   }
 }
-
-export async function deleteClient(clientCode) {
-  console.log("[deleteClient] Starting delete operation", { clientCode });
+export async function deleteClient(clientId, client = null) {
+  console.log("[deleteClient] Starting delete operation", { clientId });
+  console.log('Delete ID:', clientId);
+  console.log('Selected client:', client);
   
   try {
-    const data = await db.getTableRows(CLIENTS_TABLE);
-    const row = data.find(r => r.ClientCode === clientCode);
-    if (!row || !row.id) throw new Error('Client not found');
+    if (!clientId) throw new Error('Client not found');
     
-    console.log("[deleteClient] Deleting client", { id: row.id, clientCode });
-    await db.deleteTableRowById(CLIENTS_TABLE, row.id);
-    console.log("[deleteClient] ✅ SUCCESS: Client deleted", { clientCode });
+    console.log("[deleteClient] Deleting client", { id: clientId });
+    const { error } = await supabase
+      .from('clients2')
+      .delete()
+      .eq('id', clientId);
+
+    if (error) throw error;
+
+    console.log("[deleteClient] ✅ SUCCESS: Client deleted", { id: clientId });
   } catch (error) {
     console.error("[deleteClient] ❌ ERROR:", error.message, error);
     throw error;
   }
 }
-
 // Get all unique products from all clients
 export async function getAllProductsFromClients(forceRefresh = false) {
   try {
